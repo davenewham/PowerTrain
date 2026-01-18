@@ -65,51 +65,56 @@ class SpeedometerWidget extends StatelessWidget {
       }
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        final gaugeWidth = w.isFinite ? w * 0.9 : 120.0;
+        final gaugeHeight = h.isFinite ? (h - 40).clamp(40.0, h * 0.7) : 65.0;
+        final labelSize = (gaugeWidth / 8).clamp(12.0, 18.0);
+        final valueSize = (gaugeWidth / 5).clamp(16.0, 32.0);
+
+        return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(getFieldLabel(displayField, Localizations.localeOf(context).languageCode),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            if (iconData != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 6.0),
-                child: Icon(iconData, size: 16, color: Colors.grey[600]),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4), 
-        Stack(
-          children: [
-            SizedBox(
-              width: 120,
-              height: 65,
-              child: CustomPaint(
-                painter: _GaugePainter(
-                  scaledValue.toDouble(), 
-                  min!, 
-                  max!, 
-                  color,
-                  targetInterval: targetInterval,
-                ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(getFieldLabel(displayField, Localizations.localeOf(context).languageCode),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: labelSize)),
+                if (iconData != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6.0),
+                    child: Icon(iconData, size: labelSize, color: Colors.grey[600]),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: gaugeWidth,
+                    height: gaugeHeight,
+                    child: CustomPaint(
+                      painter: _GaugePainter(scaledValue.toDouble(), min!, max!, color, targetInterval: targetInterval),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Text(formattedValue, style: TextStyle(fontSize: valueSize, color: color, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
               ),
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 2),
-                  child: Text(formattedValue, style: TextStyle(fontSize: 16, color: color)),
-                ),
-              ),
-            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -128,14 +133,15 @@ class _GaugePainter extends CustomPainter {
     // Use the smaller dimension to ensure a perfect circle
     final diameter = math.min(size.width, size.height);
     final radius = diameter / 2;
-    
+    final strokeWidth = (diameter / 15).clamp(6.0, 20.0);
     // Center the circle in the available space
+
     final centerX = size.width / 2;
     final centerY = size.height / 2;
-    
+
     final paint = Paint()
       ..color = Colors.grey[300]!
-      ..strokeWidth = 8
+      ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
     
     // Create a square rect centered in the available space for a perfect circle
@@ -152,7 +158,7 @@ class _GaugePainter extends CustomPainter {
     if (targetInterval != null) {
       final targetPaint = Paint()
         ..color = Colors.green.withValues(alpha: 0.3)
-        ..strokeWidth = 12
+        ..strokeWidth = strokeWidth * 1.5
         ..style = PaintingStyle.stroke;
       
       // Handle inverted ranges (where max < min, like pace values)
@@ -178,11 +184,10 @@ class _GaugePainter extends CustomPainter {
       
       canvas.drawArc(rect, targetStartAngle, targetSweep, false, targetPaint);
     }
-    
     // Draw value arc
     final paintValue = Paint()
       ..color = color // Utilise la couleur passée au constructeur
-      ..strokeWidth = 8
+      ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke;
     
     // Handle inverted ranges (where max < min, like pace values)
@@ -215,18 +220,17 @@ class _GaugePainter extends CustomPainter {
     
     final needlePaint = Paint()
       ..color = Colors.black87
-      ..strokeWidth = 3
+      ..strokeWidth = (diameter / 40).clamp(2.0, 6.0)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-    
     // Draw the needle line
     canvas.drawLine(center, needleEnd, needlePaint);
-    
+
     // Draw center dot
     final centerDotPaint = Paint()
       ..color = Colors.black87
       ..style = PaintingStyle.fill;
-    canvas.drawCircle(center, 4, centerDotPaint);
+    canvas.drawCircle(center, (diameter / 30).clamp(3.0, 8.0), centerDotPaint);
   }
 
   @override

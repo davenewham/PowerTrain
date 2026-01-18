@@ -23,50 +23,48 @@ class FtmsLiveDataDisplayWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final orientation = MediaQuery.of(context).orientation;
-        final int columns = orientation == Orientation.portrait ? 3 : 4;
-        final rows = _buildRows(columns);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: rows.map((row) => Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: row,
-          )).toList(),
-        );
-      },
-    );
-  }
+    final supported = config.fields.where((f) => paramValueMap[f.name] != null).toList();
+    final speedos = supported.where((f) => f.display == 'speedometer').toList();
+    final numbers = supported.where((f) => f.display != 'speedometer').toList();
 
-  List<List<Widget>> _buildRows(int columns) {
-    final supportedFields = config.fields.where((field) => paramValueMap[field.name] != null).toList();
-    final List<List<Widget>> rows = [];
-    List<Widget> currentRow = [];
-    for (int i = 0; i < supportedFields.length; i++) {
-      currentRow.add(_buildFieldWidget(supportedFields[i]));
-      if ((currentRow.length == columns) || (i == supportedFields.length - 1)) {
-        rows.add(currentRow);
-        currentRow = [];
-      }
-    }
-    return rows;
+    return Column(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Row(
+            children: speedos.map((f) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: _buildFieldWidget(f),
+              ),
+            )).toList(),
+          ),
+        ),
+        if (numbers.isNotEmpty)
+          SizedBox(
+            height: 60,
+            child: Row(
+              children: numbers.map((f) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _buildFieldWidget(f),
+                ),
+              )).toList(),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildFieldWidget(LiveDataFieldConfig field) {
     final param = paramValueMap[field.name];
     final target = targets != null ? targets![field.name] : null;
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: LiveDataFieldWidget(
-          field: field,
-          param: param,
-          target: target,
-          defaultColor: defaultColor,
-          machineType: machineType,
-        ),
-      ),
+    return LiveDataFieldWidget(
+      field: field,
+      param: param,
+      target: target,
+      defaultColor: defaultColor,
+      machineType: machineType,
     );
   }
 }
